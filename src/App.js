@@ -11,17 +11,19 @@ import {
   auth,
   createUserProfileDocument,
   getDocSnap,
+  addCollectionAndDocument
 } from "./firebase/firebase.utils";
 import { connect } from "react-redux";
 import { setCurrentUser } from "./Redux/user/user.actions";
 
 import { createStructuredSelector } from "reselect";
 import { currentUser } from "./Redux/user/user.selectors";
+import { selectCollectionsForPreview } from "./Redux/shop/shop.selectors"
 class App extends Component {
 
   unsubscribeFromAuth = null;
   componentDidMount() {
-    const { setCurrentUser } = this.props;
+    const { setCurrentUser,collectionsArray } = this.props;
     this.unsubscribeFromAuth = auth.onAuthStateChanged(async (userAuth) => {
       if (userAuth) {
         const userDocRef = await createUserProfileDocument(userAuth, null);
@@ -30,10 +32,10 @@ class App extends Component {
           setCurrentUser(
             docSnap.data()
           );
-        }
-      } else {
-        setCurrentUser(userAuth);
-      }
+        } 
+      } 
+        setCurrentUser(userAuth); 
+        //addCollectionAndDocument('collections', collectionsArray);
     });
   }
   componentWillUnmount() {
@@ -48,7 +50,7 @@ class App extends Component {
           <Route exact path="/" component={HomePage}></Route>
           <Route path="/shop" component={ShopPage}></Route>
           <Route exact path="/checkout" component={CheckoutPage}></Route>
-          <Route path="/signin" render={() => this.props.currentUser ? (<Redirect to='/'/>) : (<SignInAndSignUpPage/>)} />
+          <Route path="/signin" render={() => this.props.currentUser ? (<Redirect to='/' />) : (<SignInAndSignUpPage />)} />
         </Switch>
       </div>
     );
@@ -60,13 +62,16 @@ class App extends Component {
   mapStateToProps = state =>({
    itemsCount: currentUser(state)
    });*/
-const mapStateToProps =createStructuredSelector({
-  currentUser: currentUser
-});
-//map a function to call reducers from store with middleware
-//setCurrentUser(user) is action returns object with type and payload to be stored in the root reducer
-const mapDispatchToProps = (dispatch) => ({
-  setCurrentUser: user => dispatch(setCurrentUser(user))
-}
-)
+   //[STUDY] : mapStateToProps allow access to global state 
+   const mapStateToProps =createStructuredSelector({
+    currentUser: currentUser,
+    collectionsArray: selectCollectionsForPreview
+  });
+  //map a function (dispatch) to call reducers from store with middleware
+  //setCurrentUser(user) is action returns object with type and payload to be stored in the root reducer
+  const mapDispatchToProps = (dispatch) => ({
+    setCurrentUser: user => dispatch(setCurrentUser(user))
+  }
+  )
+  //[STUDY] : connect : HOC from redux to enable state management 
 export default connect(mapStateToProps, mapDispatchToProps)(App);

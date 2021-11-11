@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore, setDoc, getDoc, doc } from "firebase/firestore";
+import { getFirestore, setDoc, getDoc, doc, collection, writeBatch, addDoc, getDocs } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 // Your web app's Firebase configuration
@@ -23,11 +23,11 @@ const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: "select_account" });
 
 export const signInWithGoogle = () => signInWithPopup(auth, provider);
-export const createUserProfileDocument = async (userAuth, additionalInfo) => { 
+export const createUserProfileDocument = async (userAuth, additionalInfo) => {
   if (!userAuth) return;
   const docRef = doc(db, `users/${userAuth.uid}`);
   const docSnap = await getDoc(docRef);
-  if (!docSnap.exists())  {
+  if (!docSnap.exists()) {
     try {
       let { displayName, email } = userAuth;
       let createdAt = new Date();
@@ -38,14 +38,45 @@ export const createUserProfileDocument = async (userAuth, additionalInfo) => {
         ...additionalInfo,
       });
     } catch (error) {
-        console.log("Error While creating user : ", error);
+      console.log("Error While creating user : ", error);
     }
   }
   return docRef;
 };
 
-export const getDocSnap = async (docRef)=>
-{ 
+export const getDocSnap = async (docRef) => {
   const docSnap = await getDoc(docRef);
   return docSnap;
+}
+export const getCollectionByKey = async (collectionKey) => {
+  const collectionRef = collection(db, collectionKey);
+  const docsCollection = await getDocs(collectionRef);
+  return convertDocsCollectionToMap(docsCollection.docs);
+}
+export const convertDocsCollectionToMap = (docs) => {
+  const mappedCollection = docs.map(doc => {
+    const { title, items } = doc.data();
+    return {
+      routeName: encodeURI(title.toLowerCase()),
+      id: doc.id,
+      title, items
+    }
+  });
+console.log(mappedCollection);
+  return mappedCollection.reduce((accumulator, collection) => {
+      accumulator[collection.title.toLowerCase()] = collection;
+      return accumulator;
+  },{}
+  );
+
+}
+export const addCollectionAndDocument = async (collectionKey, objectToAdd) => {
+  const batch = writeBatch(db);
+
+  const collectionRef = collection(db, collectionKey);
+  for (let element of objectToAdd) {
+    const docRef = await addDoc(collectionRef, element);
+    batch.set(docRef, element);
+  }
+  await batch.commit();
 }
